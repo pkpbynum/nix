@@ -3,7 +3,9 @@
 
 #include <set>
 #include <future>
+#include <iostream>
 #include "nix/util/sync.hh"
+#include "nix/util/thread-pool.hh"
 
 using std::set;
 
@@ -17,14 +19,13 @@ void computeClosure(const set<T> startElts, set<T> & res, GetEdgesAsync<T> getEd
 {
     struct State
     {
-        size_t pending;
         set<T> & res;
         std::exception_ptr exc;
     };
 
     Sync<State> state_(State{0, res, 0});
 
-    std::condition_variable done;
+    ThreadPool pool(30);
 
     auto enqueue = [&](this auto & enqueue, const T & current) -> void {
         {
@@ -33,41 +34,26 @@ void computeClosure(const set<T> startElts, set<T> & res, GetEdgesAsync<T> getEd
                 return;
             if (!state->res.insert(current).second)
                 return;
-            state->pending++;
         }
-
-        getEdgesAsync(current, [&](std::promise<set<T>> & prom) {
-            try {
-                auto children = prom.get_future().get();
-                for (auto & child : children)
-                    enqueue(child);
-                {
+        pool.enqueue([&, current] {
+            getEdgesAsync(current, [&](std::promise<set<T>> & prom) {
+                try {
+                    auto children = prom.get_future().get();
+                    for (auto & child : children)
+                        enqueue(child);
+                } catch (...) {
                     auto state(state_.lock());
-                    assert(state->pending);
-                    if (!--state->pending)
-                        done.notify_one();
-                }
-            } catch (...) {
-                auto state(state_.lock());
-                if (!state->exc)
-                    state->exc = std::current_exception();
-                assert(state->pending);
-                if (!--state->pending)
-                    done.notify_one();
-            };
+                    if (!state->exc)
+                        state->exc = std::current_exception();
+                };
+            });
         });
     };
 
     for (auto & startElt : startElts)
         enqueue(startElt);
 
-    {
-        auto state(state_.lock());
-        while (state->pending)
-            state.wait(done);
-        if (state->exc)
-            std::rethrow_exception(state->exc);
-    }
+    pool.process();
 }
 
 } // namespace nix
