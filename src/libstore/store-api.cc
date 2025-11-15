@@ -1073,8 +1073,8 @@ void copyClosure(
         return;
 
     StorePathSet pathsToCopy;
- 
-    auto onPathDiscovered = [&](const StorePath &path) -> bool {
+
+    auto onPathDiscovered = [&](const StorePath & path) -> bool {
         // Only recurse if the path does not already exist in `dstStore`
         return repair || !dstStore.isValidPath(path);
     };
