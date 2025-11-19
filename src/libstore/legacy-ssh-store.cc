@@ -252,15 +252,9 @@ void LegacySSHStore::buildPaths(
 }
 
 void LegacySSHStore::computeFSClosure(
-    const StorePathSet & paths,
-    StorePathSet & out,
-    bool flipDirection,
-    bool includeOutputs,
-    bool includeDerivers,
-    std::function<bool(const StorePath & path)> onPathDiscovered)
+    const StorePathSet & paths, StorePathSet & out, bool flipDirection, bool includeOutputs, bool includeDerivers)
 {
     if (flipDirection || includeDerivers) {
-        Store::computeFSClosure(paths, out, flipDirection, includeOutputs, includeDerivers, onPathDiscovered);
         return;
     }
 

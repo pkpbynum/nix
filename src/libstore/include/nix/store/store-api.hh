@@ -808,8 +808,7 @@ public:
         StorePathSet & out,
         bool flipDirection = false,
         bool includeOutputs = false,
-        bool includeDerivers = false,
-        std::function<bool(const StorePath & path)> pathCallback = nullptr);
+        bool includeDerivers = false);
 
     void computeFSClosure(
         const StorePath & path,
@@ -817,6 +816,11 @@ public:
         bool flipDirection = false,
         bool includeOutputs = false,
         bool includeDerivers = false);
+
+    /**
+     * Efficiently compute the missing paths from store, using another store as reference.
+     */
+    StorePathSet queryMissingFromClosure(const StorePathSet & rootPaths, Store & refStore);
 
     /**
      * Given a set of paths that are to be built, return the set of
