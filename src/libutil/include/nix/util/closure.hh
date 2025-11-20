@@ -19,32 +19,23 @@ void computeClosure(const set<T> startElts, set<T> & res, GetEdgesAsync<T> getEd
     struct State
     {
         set<T> & res;
-        std::exception_ptr exc;
     };
 
-    Sync<State> state_(State{res, 0});
+    Sync<State> state_(State{res});
 
-    ThreadPool pool(0);
+    ThreadPool pool(2);
 
     auto enqueue = [&](this auto & enqueue, const T & current) -> void {
         {
             auto state(state_.lock());
-            if (state->exc)
-                return;
             if (!state->res.insert(current).second)
                 return;
         }
         pool.enqueue([&, current] {
             getEdgesAsync(current, [&](std::promise<set<T>> & prom) {
-                try {
-                    auto children = prom.get_future().get();
-                    for (auto & child : children)
-                        enqueue(child);
-                } catch (...) {
-                    auto state(state_.lock());
-                    if (!state->exc)
-                        state->exc = std::current_exception();
-                };
+                auto children = prom.get_future().get();
+                for (auto & child : children)
+                    enqueue(child);
             });
         });
     };
