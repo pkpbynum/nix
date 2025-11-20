@@ -23,7 +23,7 @@ void computeClosure(const set<T> startElts, set<T> & res, GetEdgesAsync<T> getEd
 
     Sync<State> state_(State{res});
 
-    ThreadPool pool(2);
+    ThreadPool pool(0);
 
     auto enqueue = [&](this auto & enqueue, const T & current) -> void {
         {
