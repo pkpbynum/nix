@@ -3,7 +3,6 @@
 
 #include <set>
 #include <future>
-#include <iostream>
 #include "nix/util/sync.hh"
 #include "nix/util/thread-pool.hh"
 
@@ -23,9 +22,9 @@ void computeClosure(const set<T> startElts, set<T> & res, GetEdgesAsync<T> getEd
         std::exception_ptr exc;
     };
 
-    Sync<State> state_(State{0, res, 0});
+    Sync<State> state_(State{res, 0});
 
-    ThreadPool pool(30);
+    ThreadPool pool(0);
 
     auto enqueue = [&](this auto & enqueue, const T & current) -> void {
         {
