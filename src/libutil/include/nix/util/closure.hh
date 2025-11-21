@@ -4,6 +4,7 @@
 #include <set>
 #include <future>
 #include "nix/util/sync.hh"
+#include "nix/util/thread-pool.hh"
 
 using std::set;
 
@@ -68,6 +69,50 @@ void computeClosure(const set<T> startElts, set<T> & res, GetEdgesAsync<T> getEd
         if (state->exc)
             std::rethrow_exception(state->exc);
     }
+}
+
+template<typename T>
+void computeClosureParallel(const set<T> startElts, set<T> & res, std::function<set<T>(const T &)> getEdges, size_t maxThreads = 0)
+{
+    struct State
+    {
+        size_t pending;
+        set<T> & res;
+        std::exception_ptr exc;
+    };
+
+    Sync<State> state_(State{0, res, 0});
+
+    ThreadPool pool(0);
+
+    auto enqueue = [&](this auto & enqueue, const T & current) -> void {
+        {
+            auto state(state_.lock());
+            if (state->exc)
+                return;
+            if (!state->res.insert(current).second)
+                return;
+            state->pending++;
+            
+        }
+
+        pool.enqueue([&, current] {
+            try {
+                auto children = getEdges(current);
+                for (auto & child : children)
+                    enqueue(child);
+            } catch (...) {
+                auto state(state_.lock());
+                if (!state->exc)
+                    state->exc = std::current_exception();
+            };
+        });
+    };
+
+    for (auto & startElt : startElts)
+        enqueue(startElt);
+
+    pool.process();
 }
 
 } // namespace nix

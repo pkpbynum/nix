@@ -255,7 +255,6 @@ void LegacySSHStore::computeFSClosure(
     const StorePathSet & paths, StorePathSet & out, bool flipDirection, bool includeOutputs, bool includeDerivers)
 {
     if (flipDirection || includeDerivers) {
-        Store::computeFSClosure(paths, out, flipDirection, includeOutputs, includeDerivers);
         return;
     }
 

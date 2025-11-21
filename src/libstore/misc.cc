@@ -10,6 +10,7 @@
 #include "nix/util/closure.hh"
 #include "nix/store/filetransfer.hh"
 #include "nix/util/strings.hh"
+#include "nix/util/signals.hh"
 #include "nix/util/json-utils.hh"
 
 #include <boost/unordered/unordered_flat_set.hpp>
@@ -85,6 +86,28 @@ void Store::computeFSClosure(
     StorePathSet paths;
     paths.insert(startPath);
     computeFSClosure(paths, paths_, flipDirection, includeOutputs, includeDerivers);
+}
+
+StorePathSet Store::queryMissingFromClosure(const StorePathSet & rootPaths, Store & refStore)
+{
+    StorePathSet missingPaths;
+    computeClosureParallel<StorePath>(
+        rootPaths,
+        missingPaths,
+        [&](const StorePath & path) {
+            checkInterrupt();
+            auto info = refStore.queryPathInfo(path);
+            StorePathSet next;
+
+            for (auto & ref : info->references) {
+                if (ref != path)
+                    if (!isValidPath(ref))
+                        next.insert(ref);
+            }
+
+            return next;
+        }, fileTransferSettings.httpConnections);
+    return missingPaths;
 }
 
 const ContentAddress * getDerivationCA(const BasicDerivation & drv)

@@ -818,6 +818,11 @@ public:
         bool includeDerivers = false);
 
     /**
+     * Efficiently compute the missing paths from store, using another store as reference.
+     */
+    StorePathSet queryMissingFromClosure(const StorePathSet & rootPaths, Store & refStore);
+
+    /**
      * Given a set of paths that are to be built, return the set of
      * derivations that will be built, and the set of output paths that
      * will be substituted.

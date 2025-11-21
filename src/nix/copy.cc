@@ -54,14 +54,16 @@ struct CmdCopy : virtual CopyCommand, virtual BuiltPathsCommand, MixProfile, Mix
     {
         auto dstStore = getDstStore();
 
-        RealisedPath::Set stuffToCopy;
+        StorePathSet startPaths;
 
         for (auto & builtPath : allPaths) {
-            auto theseRealisations = builtPath.toRealisedPaths(*srcStore);
-            stuffToCopy.insert(theseRealisations.begin(), theseRealisations.end());
+            for (auto & p : builtPath.outPaths())
+                startPaths.insert(p);
         }
 
-        copyPaths(*srcStore, *dstStore, stuffToCopy, NoRepair, checkSigs, substitute);
+        auto closure = dstStore->queryMissingFromClosure(startPaths, *srcStore);
+
+        copyPaths(*srcStore, *dstStore, closure, NoRepair, checkSigs, substitute);
 
         updateProfile(rootPaths);
 

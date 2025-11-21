@@ -1072,9 +1072,12 @@ void copyClosure(
     if (&srcStore == &dstStore)
         return;
 
-    StorePathSet closure;
-    srcStore.computeFSClosure(storePaths, closure);
-    copyPaths(srcStore, dstStore, closure, repair, checkSigs, substitute);
+    StorePathSet pathsToCopy;
+
+    srcStore.computeFSClosure(storePaths, pathsToCopy, false, false, false);
+    pathsToCopy.insert(storePaths.begin(), storePaths.end());
+
+    copyPaths(srcStore, dstStore, pathsToCopy, repair, checkSigs, substitute);
 }
 
 std::optional<ValidPathInfo>
