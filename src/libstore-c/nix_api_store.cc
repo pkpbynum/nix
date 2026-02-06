@@ -453,4 +453,22 @@ nix_err nix_derivation_get_outputs_and_optpaths(
     NIXC_CATCH_ERRS
 }
 
+nix_err nix_store_copy_path(
+    nix_c_context * context,
+    Store * srcStore,
+    Store * dstStore,
+    const StorePath * store_path,
+    bool repair,
+    bool checkSigs)
+{
+    if (context)
+        context->last_err_code = NIX_OK;
+    try {
+        auto repairFlag = repair ? nix::RepairFlag::Repair : nix::RepairFlag::NoRepair;
+        auto checkSigsFlag = checkSigs ? nix::CheckSigsFlag::CheckSigs : nix::CheckSigsFlag::NoCheckSigs;
+        nix::copyStorePath(*srcStore->ptr, *dstStore->ptr, store_path->path, repairFlag, checkSigsFlag);
+    }
+    NIXC_CATCH_ERRS
+}
+
 } // extern "C"
